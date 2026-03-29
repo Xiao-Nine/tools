@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"net"
 	"runtime"
 	"strings"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/shirou/gopsutil/v4/docker"
 	"github.com/shirou/gopsutil/v4/host"
 	"github.com/shirou/gopsutil/v4/mem"
+	psnet "github.com/shirou/gopsutil/v4/net"
 	"github.com/spf13/cobra"
 )
 
@@ -95,6 +97,8 @@ func printSeparator() {
 	fmt.Printf("%s%s%s\n", colorGray, strings.Repeat("─", 52), colorReset)
 }
 
+var sysinfoAll bool
+
 var sysinfoCmd = &cobra.Command{
 	Use:   "sysinfo",
 	Short: "Display system information",
@@ -112,6 +116,15 @@ var sysinfoCmd = &cobra.Command{
 			h := int(uptime.Hours())
 			m := int(uptime.Minutes()) % 60
 			fmt.Printf("  %s %s%s%s\n", label("Hostname:"), colorBold, info.Hostname, colorReset)
+			// primary non-loopback IP
+			if addrs, err := net.InterfaceAddrs(); err == nil {
+				for _, a := range addrs {
+					if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+						fmt.Printf("  %s %s\n", label("IP:"), ipnet.IP.String())
+						break
+					}
+				}
+			}
 			fmt.Printf("  %s %s\n", label("OS:"), fmt.Sprintf("%s %s (%s)", info.Platform, info.PlatformVersion, info.OS))
 			fmt.Printf("  %s %s\n", label("Kernel:"), info.KernelVersion)
 			fmt.Printf("  %s %dh %dm\n", label("Uptime:"), h, m)
@@ -204,6 +217,54 @@ var sysinfoCmd = &cobra.Command{
 			}
 		}
 
+		// ── Network (--all) ─────────────────────────────────────
+		if sysinfoAll {
+			fmt.Println()
+			fmt.Println(header("Network"))
+			printSeparator()
+			ifaces, err := psnet.InterfacesWithContext(ctx)
+			if err != nil {
+				fmt.Printf("  %s%s%s\n", colorRed, err.Error(), colorReset)
+			} else {
+				printed := 0
+				for _, iface := range ifaces {
+					// skip loopback and virtual interfaces
+					isLoopback := false
+					for _, f := range iface.Flags {
+						if f == "loopback" {
+							isLoopback = true
+							break
+						}
+					}
+					if isLoopback || len(iface.Addrs) == 0 {
+						continue
+					}
+					// collect IPv4 addrs
+					var ipv4s []string
+					for _, a := range iface.Addrs {
+						ip, _, err := net.ParseCIDR(a.Addr)
+						if err != nil {
+							continue
+						}
+						if ip.To4() != nil {
+							ipv4s = append(ipv4s, a.Addr)
+						}
+					}
+					if len(ipv4s) == 0 {
+						continue
+					}
+					fmt.Printf("  %s %s%s%s\n", label(iface.Name+":"), colorBold, strings.Join(ipv4s, ", "), colorReset)
+					if iface.HardwareAddr != "" {
+						fmt.Printf("  %s %s\n", label("  MAC:"), iface.HardwareAddr)
+					}
+					printed++
+				}
+				if printed == 0 {
+					fmt.Printf("  %sno physical interfaces found%s\n", colorGray, colorReset)
+				}
+			}
+		}
+
 		// ── Docker ──────────────────────────────────────────────
 		fmt.Println()
 		fmt.Println(header("Docker"))
@@ -233,5 +294,6 @@ var sysinfoCmd = &cobra.Command{
 }
 
 func init() {
+	sysinfoCmd.Flags().BoolVarP(&sysinfoAll, "all", "a", false, "show additional info (network interfaces)")
 	rootCmd.AddCommand(sysinfoCmd)
 }

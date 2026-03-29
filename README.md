@@ -4,7 +4,7 @@
 
 - `ls`：简化版目录查看工具
 - `inject`：将本机 SSH 公钥注入远程服务器，并自动追加本地 `~/.ssh/config`
-- `sysinfo`：显示当前系统信息（CPU、内存、磁盘、Docker）
+- `sysinfo`：显示当前系统信息（CPU、内存、磁盘、网络、Docker）
 
 项目基于 [Cobra](https://github.com/spf13/cobra) 构建命令行接口。
 
@@ -28,14 +28,16 @@
 
 显示内容：
 
-- **System**：主机名、操作系统、内核版本、运行时长、进程数
+- **System**：主机名、设备 IP、操作系统、内核版本、运行时长、进程数
 - **CPU**：型号、核心数、实时使用率（带进度条）
 - **Memory**：已用 / 总量、使用率进度条、可用量
 - **Disk**：各挂载点已用 / 总量及使用率进度条（macOS 仅显示 `/` 和 `/Volumes/*`）
+- **Network**（`--all`）：物理网卡名、IPv4 地址、MAC 地址
 - **Docker**：运行中的容器列表（Docker 不可用时显示提示）
 
 ```bash
 tools sysinfo
+tools sysinfo --all   # 额外显示网卡信息
 ```
 
 ### 3. `tools inject`
@@ -48,6 +50,14 @@ tools sysinfo
 - 批量服务器注入：通过 `--servers` 指定 YAML 配置文件
 
 执行完成后，还会尝试把目标机器写入本地 `~/.ssh/config`。
+
+## 安装
+
+```bash
+go install github.com/Xiao-Nine/tools@latest
+```
+
+安装后可直接使用 `tools` 命令。
 
 ## 环境要求
 
