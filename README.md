@@ -53,6 +53,27 @@ tools sysinfo --all   # 额外显示网卡信息
 
 ## 安装
 
+### 方式一：直接下载（推荐）
+
+前往 [Releases](https://github.com/Xiao-Nine/tools/releases/latest) 页面，根据操作系统下载对应的可执行文件：
+
+| 系统 | 文件名 |
+|------|--------|
+| Windows | `tools_windows.exe` |
+| Linux | `tools_linux` |
+| macOS | `tools_macos` |
+
+Linux / macOS 下载后需赋予执行权限：
+
+```bash
+chmod +x tools_linux   # 或 tools_macos
+sudo mv tools_linux /usr/local/bin/tools
+```
+
+### 方式二：通过 Go 安装
+
+需要本地已安装 Go `1.24` 或更高版本：
+
 ```bash
 go install github.com/Xiao-Nine/tools@latest
 ```
@@ -61,7 +82,8 @@ go install github.com/Xiao-Nine/tools@latest
 
 ## 环境要求
 
-- Go `1.24.1` 或更高版本
+- 直接下载无需任何依赖
+- 通过 Go 安装需要 Go `1.24` 或更高版本
 
 ## 构建与运行
 
