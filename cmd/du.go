@@ -17,23 +17,39 @@ var (
 )
 
 type fileEntry struct {
-	name  string
-	size  int64
-	isDir bool
+	name     string
+	size     int64
+	isDir    bool
+	noAccess bool
 }
 
-func calcSize(path string) (int64, error) {
+func calcSize(path string) (int64, bool, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsPermission(err) {
+			return 0, true, nil
+		}
+		return 0, false, err
+	}
+	if !info.IsDir() {
+		return info.Size(), false, nil
+	}
+
 	var total int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+	permDenied := false
+	err = filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil // skip unreadable entries
+			if os.IsPermission(err) {
+				permDenied = true
+			}
+			return nil
 		}
 		if !info.IsDir() {
 			total += info.Size()
 		}
 		return nil
 	})
-	return total, err
+	return total, permDenied && total == 0, err
 }
 
 var duCmd = &cobra.Command{
@@ -73,17 +89,23 @@ var duCmd = &cobra.Command{
 			path := filepath.Join(dir, name)
 			var size int64
 
+			var noAccess bool
 			if e.IsDir() {
-				size, _ = calcSize(path)
+				size, noAccess, _ = calcSize(path)
 			} else {
 				info, err := e.Info()
 				if err != nil {
-					continue
+					if os.IsPermission(err) {
+						noAccess = true
+					} else {
+						continue
+					}
+				} else {
+					size = info.Size()
 				}
-				size = info.Size()
 			}
 
-			files = append(files, fileEntry{name: name, size: size, isDir: e.IsDir()})
+			files = append(files, fileEntry{name: name, size: size, isDir: e.IsDir(), noAccess: noAccess})
 			totalSize += size
 		}
 
@@ -116,6 +138,12 @@ var duCmd = &cobra.Command{
 			displayName := f.name
 			if f.isDir {
 				displayName += "/"
+			}
+
+			if f.noAccess {
+				fmt.Printf("  %-*s %s[no access]%s\n",
+					maxName, displayName, colorRed, colorReset)
+				continue
 			}
 
 			var pct float64
