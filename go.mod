@@ -1,6 +1,6 @@
 module github.com/Xiao-Nine/tools
 
-go 1.24.0
+go 1.24
 
 require (
 	github.com/shirou/gopsutil/v4 v4.26.2
