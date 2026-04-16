@@ -104,9 +104,6 @@ func init() {
 	rootCmd.AddCommand(injectCmd)
 
 }
-func initConfig() {
-	// 当前没啥用，可以拓展全局配置
-}
 
 // parseConnInfo 解析类似 username:password@ip:port 的连接字符串
 func parseConnInfo(info string) (ServerConfig, error) {

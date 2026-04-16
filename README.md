@@ -1,8 +1,9 @@
 # tools
 
-一个用 Go 编写的个人命令行工具集合，目前包含三个子命令：
+一个用 Go 编写的个人命令行工具集合,目前包含四个子命令：
 
 - `ls`：简化版目录查看工具
+- `fx`：与 fx_server 文件快递柜服务端交互，上传/下载文件
 - `inject`：将本机 SSH 公钥注入远程服务器，并自动追加本地 `~/.ssh/config`
 - `sysinfo`：显示当前系统信息（CPU、内存、磁盘、网络、Docker）
 
@@ -22,7 +23,50 @@
 - 目录名称会追加 `/`
 - 文件名按不区分大小写排序
 
-### 2. `tools sysinfo`
+### 2. `tools fx`
+
+与 fx_server 文件快递柜服务端交互，支持文件和目录的上传下载。
+
+**配置文件**
+
+首次使用前需要创建配置文件 `~/.tools/config.yaml`：
+
+```yaml
+fx_server:
+  server: "http://localhost:8080"  # 你的 fx_server 地址
+```
+
+**上传文件或目录**
+
+使用 `-s` 参数上传文件或目录：
+
+```bash
+tools -s myfile.txt          # 上传单个文件
+tools -s mydirectory         # 上传目录（自动压缩成zip）
+tools -s /path/to/file.pdf   # 上传指定路径的文件
+```
+
+上传成功后会返回 **6位取件码**，例如：`123456`
+
+**下载文件或目录**
+
+使用取件码下载文件：
+
+```bash
+tools 123456
+```
+
+- 如果下载的是 zip 文件（上传时是目录），会自动解压
+- 如果文件已存在，会自动添加数字后缀避免覆盖
+
+**特点**
+
+- 上传目录时自动压缩成 zip
+- 下载 zip 文件时自动解压
+- 支持文件名冲突处理
+- 显示友好的上传/下载进度提示
+
+### 3. `tools sysinfo`
 
 显示当前系统的概览信息，以彩色终端 UI 输出（Windows 下自动禁用颜色）。
 
@@ -40,7 +84,7 @@ tools sysinfo
 tools sysinfo --all   # 额外显示网卡信息
 ```
 
-### 3. `tools inject`
+### 4. `tools inject`
 
 将本机公钥写入远程服务器的 `~/.ssh/authorized_keys`，方便后续使用密钥登录。
 
@@ -118,6 +162,7 @@ tools --help
 当前可用子命令：
 
 - `ls`
+- `fx`
 - `inject`
 - `completion`
 
@@ -143,6 +188,38 @@ tools ls -al /var/log
 
 - `-a, --all`：显示隐藏文件
 - `-l, --long`：长格式显示
+
+### `tools fx`
+
+基本用法：
+
+```bash
+tools fx [-s <path> | <code>]
+```
+
+示例：
+
+```bash
+# 上传文件或目录
+tools fx -s myfile.txt
+tools fx -s mydirectory
+tools fx -s /path/to/folder
+
+# 下载文件（使用6位取件码）
+tools fx 123456
+```
+
+参数：
+
+- `-s, --send`：上传模式，后面跟要上传的文件或目录路径
+- 无参数：下载模式，后面跟6位取件码
+
+配置文件 `~/.tools/config.yaml` 格式：
+
+```yaml
+fx_server:
+  server: "http://your-server.com:8080"
+```
 
 ### `tools inject`
 
@@ -244,6 +321,7 @@ Host 192.168.1.10
 ├── cmd/
 │   ├── root.go
 │   ├── ls.go
+│   ├── fx.go
 │   ├── sysinfo.go
 │   └── inject.go
 ├── bin/
